@@ -134,7 +134,7 @@ $('generate').onclick=async()=>{
   const findVideo=(v)=>{
    if(!v||videoUrl)return;
    if(typeof v==='string'){
-    if(/\.(mp4|webm|mov)(\?|$)/i.test(v)||v.includes('/gradio_api/file=')||v.startsWith('/file='))videoUrl=new URL(v,base).href;
+    if(/\.(mp4|webm|mov)(\?|$)/i.test(v)||v.includes('/gradio_api/file=')||v.startsWith('/file='))videoUrl=new URL(v,selected.base).href;
     return;
    }
    if(Array.isArray(v)){v.forEach(findVideo);return}
@@ -152,7 +152,7 @@ $('generate').onclick=async()=>{
   const link=document.createElement('a');link.href=videoUrl;link.target='_blank';link.rel='noopener';link.textContent='Open or save generated video';link.style.display='block';link.style.marginTop='10px';
   $('result').appendChild(link);
   video.load();
-  const promptNote=document.createElement('p');promptNote.className='small';promptNote.textContent='Prompt sent to model: '+prompt;$('result').appendChild(promptNote);const copyBtn=document.createElement('button');copyBtn.type='button';copyBtn.className='muted-button';copyBtn.textContent='Copy prompt';copyBtn.onclick=async()=>{try{await navigator.clipboard.writeText(prompt);copyBtn.textContent='Prompt copied'}catch(e){const ta=document.createElement('textarea');ta.value=prompt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');copyBtn.textContent='Prompt copied'}catch(x){copyBtn.textContent='Copy unavailable'}ta.remove()}};$('result').appendChild(copyBtn);$('status').textContent=(usingFallback?'LTX-2.5 was unavailable; fallback LTX 0.9.8 returned a clip.':'LTX 0.9.8 returned a clip with two-pass refinement. Review it against your prompt; exact prompt matching is not guaranteed.');
+  const promptNote=document.createElement('p');promptNote.className='small';promptNote.textContent='Prompt sent to model: '+prompt;$('result').appendChild(promptNote);const copyBtn=document.createElement('button');copyBtn.type='button';copyBtn.className='muted-button';copyBtn.textContent='Copy prompt';copyBtn.onclick=async()=>{try{await navigator.clipboard.writeText(prompt);copyBtn.textContent='Prompt copied'}catch(e){const ta=document.createElement('textarea');ta.value=prompt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');copyBtn.textContent='Prompt copied'}catch(x){copyBtn.textContent='Copy unavailable'}ta.remove()}};$('result').appendChild(copyBtn);$('status').textContent=(selected.kind==='ltx098'?'LTX-2.5 was unavailable; fallback LTX 0.9.8 returned a clip.':'Official LTX-2.5 returned a clip. Review it against your prompt; exact prompt matching is not guaranteed.');
  }catch(error){
   $('result').replaceChildren();
   const message=error&&error.name==='AbortError'?'The free model took longer than 8 minutes and the request was stopped. Check the model host and try again.':(error&&error.message?error.message:String(error??'Unknown error'));
