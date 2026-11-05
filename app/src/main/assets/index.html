@@ -51,9 +51,7 @@ $('generate').onclick=async()=>{
  $('status').textContent='Connecting to LTX Video…';
  $('result').replaceChildren();
  const base='https://lightricks-ltx-video-distilled.hf.space';
- const token=$('token').value.trim();
  const headers={'Content-Type':'application/json'};
- if(token)headers.Authorization='Bearer '+token;
  try{
   const cinematicPrompt='LIVE-ACTION PHOTOREALISTIC CINEMA. '+prompt+'. Visual treatment: '+$('style').value+'. Camera: '+$('camera').value+'. Lighting: '+$('lighting').value+'. Composition: '+$('format').value+'. Photorealistic live-action film frame, natural skin texture and realistic facial detail where people appear, physically based lighting, grounded production design, fine real-world surface textures, believable weight and momentum, anatomically correct movement, one clear action, one continuous shot, stable subject identity and wardrobe, coherent background geometry, deliberate foreground/midground/background separation, cinematic depth of field, natural motion blur, professional restrained color grading, crisp subject focus. Avoid illustration or animation aesthetics unless the selected visual direction explicitly requests them.';
   const negative='unintended cartoon, anime, illustration, storybook art, comic style, toy-like characters, plastic skin, exaggerated eyes, flat shading, low detail, blurry subject, flicker, jitter, frame warping, morphing, duplicate people, extra limbs, fused fingers, distorted anatomy, inconsistent face, changing clothes, unstable background, abrupt camera shake, text, subtitles, watermark';
