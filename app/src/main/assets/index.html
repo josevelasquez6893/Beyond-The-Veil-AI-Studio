@@ -57,14 +57,21 @@ function buildDirectorPlan(raw,duration){
  ];
  const score=features.reduce((sum,f)=>sum+(f.ok?f.weight:0),0);
  const missing=features.filter(f=>!f.ok).map(f=>f.name);
- const subject=(idea.match(/(?:a|an|the)\s+([\w -]{2,55})/i)||[])[1]||'the main subject';
+ const subjectMatch=idea.match(/(?:a|an|the)\s+([a-z][\\w-]*(?:\\s+[a-z][\\w-]*){0,3})/i);
+ const subject=subjectMatch?subjectMatch[1].trim():'the main subject';
+ const conflicts=[];
+ const conflict=(label,a,b)=>{if(a.test(idea)&&b.test(idea))conflicts.push(label)};
+ conflict('camera movement: static versus moving',/\\b(static|locked[- ]off|fixed camera|no camera movement)\\b/i,/\\b(orbit|tracking|dolly|push[- ]in|pan|handheld)\\b/i);
+ conflict('time of day: daylight versus night',/\\b(daylight|midday|noon|bright afternoon|sunny day)\\b/i,/\\b(midnight|nighttime|dark night|moonlit|starry night)\\b/i);
+ conflict('motion: slow versus fast',/\\b(slow[- ]motion|very slowly|gentle movement)\\b/i,/\\b(rapidly|at full speed|fast[- ]paced|sprinting|rapid movement)\\b/i);
+ conflict('shot structure: one continuous take versus multiple cuts',/\\b(one continuous shot|single take|no cuts)\\b/i,/\\b(montage|multiple cuts|cut to|rapid edits)\\b/i);
  const pathText=trajectory.map((v,i)=>'t'+i+'=('+v[0]+','+v[1]+')').join('; ');
  const timing='0-'+beat1.toFixed(1)+'s establish; '+beat1.toFixed(1)+'-'+beat2.toFixed(1)+'s primary action; '+beat2.toFixed(1)+'-'+seconds.toFixed(1)+'s resolve';
  const math='TEMPORAL AND CAMERA DESIGN: '+frames+' frames at 24 fps; 180-degree shutter reference '+(1/48).toFixed(4)+' s; cubic Bezier camera path '+pathText+'. Use smoothstep easing E(t)=3t^2-2t^3 for zero-velocity starts and stops. Keep camera displacement subtle and monotonic; preserve horizon, subject scale and screen direction. Shot timing: '+timing+'.';
  const physics='PHYSICAL CONSISTENCY: enforce persistent object identity and topology; stable rigid-body scale; gravity-consistent arcs; contact before reaction; continuous momentum; plausible acceleration and deceleration; consistent shadows, reflections, parallax, occlusion and light direction. Preserve facial structure, clothing seams, accessory placement, environment geometry and material response across every frame.';
  const cinematography='CINEMATOGRAPHY: '+camera+'; '+lighting+'; '+style+'. Use a coherent lens perspective, controlled depth of field, motivated focus, physically plausible exposure, natural motion blur, restrained highlight roll-off, fine texture, realistic skin and material microstructure. Keep one clear subject and one primary action in a single continuous shot.';
  return {
-  subject:subject.trim(),score,missing,trajectory,
+  subject,score,missing,conflicts,trajectory,
   plan:['Opening 0-'+beat1.toFixed(1)+'s: establish '+subject+' and spatial layout','Action '+beat1.toFixed(1)+'-'+beat2.toFixed(1)+'s: one physically readable action with continuous motion','Resolution '+beat2.toFixed(1)+'-'+seconds.toFixed(1)+'s: settle the action and hold the final composition'],
   prompt:idea+' '+math+' '+physics+' '+cinematography+' CONTINUITY: preserve exact subject identity, face, body proportions, wardrobe, props, materials, weather, time of day, screen direction and spatial layout. No teleporting, morphing, duplicate subjects, unexplained cuts, random camera shake, text or watermarks. Do not invent story events. Render as grounded live-action cinema unless the selected visual direction explicitly requests animation.'
  };
@@ -78,7 +85,9 @@ $('directorPass').onclick=()=>{
  const list=document.createElement('ol');plan.plan.forEach(item=>{const li=document.createElement('li');li.textContent=item;list.appendChild(li)});panel.appendChild(list);
  const path=document.createElement('p');path.className='small';path.textContent='Calculated camera trajectory: '+plan.trajectory.map((v,i)=>'P'+i+' '+v.join(', ')).join(' · ');panel.appendChild(path);
  const note=document.createElement('p');note.className='small';note.textContent=plan.missing.length?'Prompt could be more specific about: '+plan.missing.join(', ')+'. Add those details if relevant.':'Your prompt covers the major planning dimensions.';
- panel.appendChild(note);panel.dataset.directorPrompt=plan.prompt;
+ panel.appendChild(note);
+ if(plan.conflicts.length){const warning=document.createElement('p');warning.className='small';warning.textContent='Potential contradictions to resolve: '+plan.conflicts.join('; ')+'. The director will preserve your original wording rather than silently choosing one.';panel.appendChild(warning)}
+ panel.dataset.directorPrompt=plan.prompt;
  $('status').textContent='Director analysis ready. The mathematical camera path, timing curve and continuity instructions will be sent to the video model. The readiness score measures prompt coverage, not rendered video quality.';
 };
 function stopAmbient(){ambientNodes.forEach(n=>{try{if(n.stop)n.stop()}catch(e){}});ambientNodes=[];if(master){try{master.disconnect()}catch(e){}master=null}soundOn=false;$('soundToggle').textContent='▶ Start cinematic soundtrack';$('soundToggle').setAttribute('aria-pressed','false');$('audioStatus').textContent='Soundtrack stopped.'}
@@ -240,7 +249,7 @@ $('generate').onclick=async()=>{
   const link=document.createElement('a');link.href=videoUrl;link.target='_blank';link.rel='noopener';link.textContent='Open or save generated video';link.style.display='block';link.style.marginTop='10px';
   $('result').appendChild(link);
   video.load();
-  const promptNote=document.createElement('p');promptNote.className='small';promptNote.textContent='Prompt sent to model: '+prompt;$('result').appendChild(promptNote);const copyBtn=document.createElement('button');copyBtn.type='button';copyBtn.className='muted-button';copyBtn.textContent='Copy prompt';copyBtn.onclick=async()=>{try{await navigator.clipboard.writeText(prompt);copyBtn.textContent='Prompt copied'}catch(e){const ta=document.createElement('textarea');ta.value=prompt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');copyBtn.textContent='Prompt copied'}catch(x){copyBtn.textContent='Copy unavailable'}ta.remove()}};$('result').appendChild(copyBtn);$('status').textContent=(selected.kind==='ltx098'?'LTX-2.5 was unavailable; fallback LTX 0.9.8 returned a clip.':'Official LTX-2.5 returned a clip. Review it against your prompt; exact prompt matching is not guaranteed.');
+  const promptNote=document.createElement('p');promptNote.className='small';promptNote.textContent='Creative brief: '+prompt+'\\n\\nCompiled model instructions: '+cinematicPrompt;$('result').appendChild(promptNote);const copyBtn=document.createElement('button');copyBtn.type='button';copyBtn.className='muted-button';copyBtn.textContent='Copy prompt';copyBtn.onclick=async()=>{try{await navigator.clipboard.writeText(prompt);copyBtn.textContent='Prompt copied'}catch(e){const ta=document.createElement('textarea');ta.value=prompt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');copyBtn.textContent='Prompt copied'}catch(x){copyBtn.textContent='Copy unavailable'}ta.remove()}};$('result').appendChild(copyBtn);$('status').textContent=(selected.kind==='ltx098'?'LTX-2.5 was unavailable; fallback LTX 0.9.8 returned a clip.':'Official LTX-2.5 returned a clip. Review it against your prompt; exact prompt matching is not guaranteed.');
  }catch(error){
   $('result').replaceChildren();
   const message=error&&error.name==='AbortError'?'The free model request exceeded the 10-minute safety timeout and was stopped. Check the model host and try again.':(error&&error.message?error.message:String(error??'Unknown error'));
