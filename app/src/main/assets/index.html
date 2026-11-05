@@ -28,13 +28,45 @@ async function testAudio(){try{const C=window.AudioContext||window.webkitAudioCo
 
 function buildDirectorPlan(raw,duration){
  const idea=raw.replace(/\s+/g,' ').trim();
- const subject=(idea.match(/(?:a|an|the)\s+([\w -]{2,55})/i)||[])[1]||'the main subject';
  const seconds=Math.max(2,Math.min(8.5,Number(duration)||5));
- const beat1=(seconds*.22).toFixed(1),beat2=(seconds*.68).toFixed(1);
+ const beat1=seconds*.20,beat2=seconds*.68;
+ const camera=$('camera').value,lighting=$('lighting').value,style=$('style').value;
+ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+ const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
+ const bezier=(p0,p1,p2,p3,t)=>{const u=1-t;return [0,1].map(axis=>u*u*u*p0[axis]+3*u*u*t*p1[axis]+3*u*t*t*p2[axis]+t*t*t*p3[axis])};
+ const paths={
+  push:[[0,0],[.12,0],[.32,0],[.48,0]],
+  track:[[0,0],[.10,.04],[.38,.04],[.52,0]],
+  pan:[[0,0],[.05,0],[.40,-.08],[.55,-.10]],
+  orbit:[[0,0],[.16,-.12],[.34,-.12],[.48,0]],
+  close:[[0,0],[.02,0],[.08,0],[.12,0]]
+ };
+ const kind=/track/i.test(camera)?'track':/pan/i.test(camera)?'pan':/orbit/i.test(camera)?'orbit':/close/i.test(camera)?'close':'push';
+ const points=paths[kind];
+ const trajectory=[0,.25,.5,.75,1].map(t=>bezier(points[0],points[1],points[2],points[3],smooth(t)).map(v=>Number(v.toFixed(3))));
+ const frames=Math.max(48,Math.round(seconds*24));
+ const shutter=1/48;
+ const features=[
+  {name:'subject',weight:18,ok:/\b(person|man|woman|child|character|creature|animal|vehicle|object|hero|guardian|figure|subject)\b/i.test(idea)},
+  {name:'action',weight:20,ok:/\b(walk|run|move|turn|open|close|rise|fall|fight|look|enter|leave|fly|drive|dance|reach|hold|throw|emerge|approach|camera|drift|flow|explode|build)\w*/i.test(idea)},
+  {name:'environment',weight:14,ok:/\b(in|inside|outside|through|across|over|under|near|forest|city|room|street|ocean|mountain|desert|cathedral|space|sky|building|landscape)\b/i.test(idea)},
+  {name:'camera intent',weight:14,ok:/\b(camera|close-up|wide shot|tracking|pan|orbit|push-in|low angle|aerial|lens)\b/i.test(idea)},
+  {name:'lighting',weight:10,ok:/\b(light|lighting|sun|sunset|sunrise|moon|shadow|glow|dark|bright|neon|fog|mist|volumetric)\b/i.test(idea)},
+  {name:'temporal progression',weight:12,ok:/\b(then|before|after|while|as|slowly|suddenly|gradually|eventually|begins|ends|until)\b/i.test(idea)},
+  {name:'physical detail',weight:12,ok:/\b(water|smoke|dust|rain|wind|cloth|hair|weight|impact|footsteps|reflection|shadow|debris|steam|fire)\b/i.test(idea)}
+ ];
+ const score=features.reduce((sum,f)=>sum+(f.ok?f.weight:0),0);
+ const missing=features.filter(f=>!f.ok).map(f=>f.name);
+ const subject=(idea.match(/(?:a|an|the)\s+([\w -]{2,55})/i)||[])[1]||'the main subject';
+ const pathText=trajectory.map((v,i)=>'t'+i+'=('+v[0]+','+v[1]+')').join('; ');
+ const timing='0-'+beat1.toFixed(1)+'s establish; '+beat1.toFixed(1)+'-'+beat2.toFixed(1)+'s primary action; '+beat2.toFixed(1)+'-'+seconds.toFixed(1)+'s resolve';
+ const math='TEMPORAL AND CAMERA DESIGN: '+frames+' frames at 24 fps; 180-degree shutter reference 1/48 s; cubic Bezier camera path '+pathText+'. Use smoothstep easing E(t)=3t^2-2t^3 for zero-velocity starts and stops. Keep camera displacement subtle and monotonic; preserve horizon, subject scale and screen direction. Shot timing: '+timing+'.';
+ const physics='PHYSICAL CONSISTENCY: enforce persistent object identity and topology; stable rigid-body scale; gravity-consistent arcs; contact before reaction; continuous momentum; plausible acceleration and deceleration; consistent shadows, reflections, parallax, occlusion and light direction. Preserve facial structure, clothing seams, accessory placement, environment geometry and material response across every frame.';
+ const cinematography='CINEMATOGRAPHY: '+camera+'; '+lighting+'; '+style+'. Use a coherent lens perspective, controlled depth of field, motivated focus, physically plausible exposure, natural motion blur, restrained highlight roll-off, fine texture, realistic skin and material microstructure. Keep one clear subject and one primary action in a single continuous shot.';
  return {
-  subject:subject.trim(),
-  prompt:idea+' DIRECTOR CONTINUITY BLUEPRINT: Preserve the exact identity, face, body proportions, wardrobe, props, materials, weather, time of day, and spatial layout established in the opening frame. Stage one readable primary action with a clear beginning, physical progression, and resolved end. Opening (0-'+beat1+'s): establish subject, environment, screen direction, horizon, and key light. Action ('+beat1+'-'+beat2+'s): show the described action with believable weight, contact, momentum, and cause-and-effect; keep the subject recognizably consistent. Resolution ('+beat2+'-'+seconds.toFixed(1)+'s): complete the action naturally and settle camera motion without introducing new subjects or locations. Use coherent 3D geometry, stable object permanence, consistent scale and perspective, physically plausible cloth, hair, water, smoke and shadows, natural motion blur, realistic lens behavior, motivated camera movement, and cinematic exposure. One continuous coherent shot; no montage, no teleporting, no unexplained cuts, no sudden identity changes. Maintain the described events and do not invent story outcomes.',
-  plan:['Opening: establish '+subject+' and the environment','Action: one clear physical action with consistent screen direction','Ending: resolve the action and hold a coherent final composition']
+  subject:subject.trim(),score,missing,trajectory,
+  plan:['Opening 0-'+beat1.toFixed(1)+'s: establish '+subject+' and spatial layout','Action '+beat1.toFixed(1)+'-'+beat2.toFixed(1)+'s: one physically readable action with continuous motion','Resolution '+beat2.toFixed(1)+'-'+seconds.toFixed(1)+'s: settle the action and hold the final composition'],
+  prompt:idea+' '+math+' '+physics+' '+cinematography+' CONTINUITY: preserve exact subject identity, face, body proportions, wardrobe, props, materials, weather, time of day, screen direction and spatial layout. No teleporting, morphing, duplicate subjects, unexplained cuts, random camera shake, text or watermarks. Do not invent story events. Render as grounded live-action cinema unless the selected visual direction explicitly requests animation.'
  };
 }
 $('directorPass').onclick=()=>{
@@ -42,10 +74,12 @@ $('directorPass').onclick=()=>{
  if(!raw){$('status').textContent='Describe your scene before running the Director pass.';return}
  const plan=buildDirectorPlan(raw,$('duration').value);
  const panel=$('directorPlan');panel.hidden=false;panel.replaceChildren();
- const title=document.createElement('strong');title.textContent='On-device director plan';panel.appendChild(title);
+ const title=document.createElement('strong');title.textContent='Mathematical cinematography analysis — prompt readiness '+plan.score+'/100';panel.appendChild(title);
  const list=document.createElement('ol');plan.plan.forEach(item=>{const li=document.createElement('li');li.textContent=item;list.appendChild(li)});panel.appendChild(list);
- panel.dataset.directorPrompt=plan.prompt;
- $('status').textContent='Director pass ready. Generation will include timed action beats and continuity instructions.';
+ const path=document.createElement('p');path.className='small';path.textContent='Calculated camera trajectory: '+plan.trajectory.map((v,i)=>'P'+i+' '+v.join(', ')).join(' · ');panel.appendChild(path);
+ const note=document.createElement('p');note.className='small';note.textContent=plan.missing.length?'Prompt could be more specific about: '+plan.missing.join(', ')+'. Add those details if relevant.':'Your prompt covers the major planning dimensions.';
+ panel.appendChild(note);panel.dataset.directorPrompt=plan.prompt;
+ $('status').textContent='Director analysis ready. The mathematical camera path, timing curve and continuity instructions will be sent to the video model. The readiness score measures prompt coverage, not rendered video quality.';
 };
 function stopAmbient(){ambientNodes.forEach(n=>{try{if(n.stop)n.stop()}catch(e){}});ambientNodes=[];if(master){try{master.disconnect()}catch(e){}master=null}soundOn=false;$('soundToggle').textContent='▶ Start cinematic soundtrack';$('soundToggle').setAttribute('aria-pressed','false');$('audioStatus').textContent='Soundtrack stopped.'}
 $('soundVolume').addEventListener('input',()=>{if(master&&audioCtx)master.gain.setTargetAtTime(Number($('soundVolume').value)/100*.62,audioCtx.currentTime,.08)});
