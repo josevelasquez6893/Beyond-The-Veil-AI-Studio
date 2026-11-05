@@ -68,14 +68,18 @@ $('generate').onclick=async()=>{
    buffer+=decoder.decode(part.value||new Uint8Array(),{stream:!done});
    const chunks=buffer.split(/\r?\n\r?\n/);buffer=chunks.pop()||'';
    for(const chunk of chunks){
-    const eventLine=chunk.split(/\r?\n/).find(x=>x.startsWith('event:'));
-    const line=chunk.split(/\r?\n/).find(x=>x.startsWith('data:'));
-    if(!line)continue;
-    const raw=line.slice(5).trim();
+    const lines=chunk.split(/\r?\n/);
+    const eventLine=lines.find(x=>x.startsWith('event:'))||'';
+    const dataLines=lines.filter(x=>x.startsWith('data:'));
+    if(!dataLines.length)continue;
+    const raw=dataLines.map(x=>x.slice(5).trim()).join('\n');
     if(raw==='[DONE]')continue;
-    let value;try{value=JSON.parse(raw)}catch(e){continue}
-    if(eventLine&&/error/i.test(eventLine))throw Error(typeof value==='string'?value:JSON.stringify(value));
-    if(value&&value.error)throw Error(String(value.error));
+    let value=null;try{value=JSON.parse(raw)}catch(e){value=raw}
+    if(/event:\s*error/i.test(eventLine)){
+      const detail=value&&typeof value==='object'?(value.message||value.error||value.detail||JSON.stringify(value)):String(value??'');
+      throw Error(detail&&detail!=='null'?'LTX server error: '+detail:'LTX Video reported an internal generation error but supplied no details. The model Space may be temporarily unavailable or its GPU job may have failed. Wait a minute and retry; if it repeats, check the model page.');
+    }
+    if(value&&typeof value==='object'&&value.error)throw Error('LTX server error: '+String(value.error));
     if(Array.isArray(value))output=value;
     else if(value&&Array.isArray(value.data))output=value.data;
     else if(value&&typeof value==='object'&&(value.video||value.path||value.url))output=value;
@@ -108,7 +112,9 @@ $('generate').onclick=async()=>{
   const promptNote=document.createElement('p');promptNote.className='small';promptNote.textContent='Prompt sent to model: '+prompt;$('result').appendChild(promptNote);$('status').textContent='LTX Video returned a clip. Review it against your prompt; this model cannot guarantee exact prompt matching.';
  }catch(error){
   $('result').replaceChildren();
-  $('status').textContent='Video generation failed: '+(error&&error.message?error.message:String(error))+' No sample video is being shown as a substitute.';
+  const message=error&&error.message?error.message:String(error??'Unknown error');
+  $('status').textContent='Video generation failed: '+message+' No sample video is being shown as a substitute.';
+  const help=document.createElement('p');help.className='small';help.textContent='Troubleshooting: confirm your internet connection, check that the LTX Video Space is available, and retry. If the error continues, the model host—not your prompt—may be failing.';$('result').appendChild(help);
  }finally{busy=false;$('generate').disabled=false}
 }
 render();
