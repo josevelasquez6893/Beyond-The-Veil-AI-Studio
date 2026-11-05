@@ -83,11 +83,8 @@ $('directorPass').onclick=()=>{
 };
 function stopAmbient(){ambientNodes.forEach(n=>{try{if(n.stop)n.stop()}catch(e){}});ambientNodes=[];if(master){try{master.disconnect()}catch(e){}master=null}soundOn=false;$('soundToggle').textContent='▶ Start cinematic soundtrack';$('soundToggle').setAttribute('aria-pressed','false');$('audioStatus').textContent='Soundtrack stopped.'}
 $('soundVolume').addEventListener('input',()=>{if(master&&audioCtx)master.gain.setTargetAtTime(Number($('soundVolume').value)/100*.62,audioCtx.currentTime,.08)});
-document.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{if(b.id!=='clickToggle'&&b.id!=='soundToggle')clickSound()}));
-let firstAudioGesture=false;
-function activateAudioOnFirstGesture(){if(firstAudioGesture)return;firstAudioGesture=true;const C=window.AudioContext||window.webkitAudioContext;if(C){audioCtx=audioCtx||new C();audioCtx.resume().then(()=>{if(!soundOn)startAmbient();clickSound()}).catch(e=>{$('audioStatus').textContent='Tap the soundtrack button to enable audio: '+e.message})}}
-document.addEventListener('pointerdown',activateAudioOnFirstGesture,{once:true,passive:true});
-document.addEventListener('keydown',activateAudioOnFirstGesture,{once:true});
+// Sound effects are triggered only by the controls that explicitly request them.
+// Audio is opt-in: never start the soundtrack automatically on the first tap.
 $('soundToggle').onclick=()=>{if(soundOn)stopAmbient();else startAmbient()};$('audioTest').onclick=testAudio;
 $('clickToggle').onclick=()=>{clickOn=!clickOn;$('clickToggle').textContent='Click effects: '+(clickOn?'On':'Off');$('clickToggle').setAttribute('aria-pressed',String(clickOn))};
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id===b.dataset.tab))});
@@ -122,9 +119,14 @@ $('ready').onclick=async()=>{
  b.disabled=false;
 }
 $('open').onclick=()=>window.open('https://huggingface.co/spaces/Lightricks/ltx-video-distilled','_blank');
-$('prompt').addEventListener('input',()=>{$('charCount').textContent=$('prompt').value.length});
-$('useRecipe').onclick=()=>{const recipe=$('recipe').value;if(!recipe){$('status').textContent='Choose a starter recipe first.';return}const current=$('prompt').value.trim();$('prompt').value=(current?current+' ':'')+recipe;$('prompt').value=$('prompt').value.slice(0,1800);$('charCount').textContent=$('prompt').value.length;$('prompt').focus();$('status').textContent='Starter added. Customize the subject, location, action, and ending before generating.'};
-$('clearPrompt').onclick=()=>{$('prompt').value='';$('charCount').textContent='0';$('prompt').focus()};
+function invalidateDirectorPlan(){
+ const panel=$('directorPlan');
+ if(panel){panel.hidden=true;delete panel.dataset.directorPrompt;panel.replaceChildren()}
+}
+$('prompt').addEventListener('input',()=>{$('charCount').textContent=$('prompt').value.length;invalidateDirectorPlan()});
+['duration','style','camera','lighting','format'].forEach(id=>$(id).addEventListener('change',invalidateDirectorPlan));
+$('useRecipe').onclick=()=>{const recipe=$('recipe').value;if(!recipe){$('status').textContent='Choose a starter recipe first.';return}const current=$('prompt').value.trim();$('prompt').value=(current?current+' ':'')+recipe;$('prompt').value=$('prompt').value.slice(0,1800);$('charCount').textContent=$('prompt').value.length;invalidateDirectorPlan();$('prompt').focus();$('status').textContent='Starter added. Customize the subject, location, action, and ending before generating.'};
+$('clearPrompt').onclick=()=>{$('prompt').value='';$('charCount').textContent='0';invalidateDirectorPlan();$('prompt').focus()};
 $('enhance').onclick=()=>{const p=$('prompt').value.trim();if(!p){$('status').textContent='Add a scene description first.';return}const add=' Cinematic continuity: one clear main subject, detailed environment, a single readable action, deliberate '+$('camera').value+', '+$('lighting').value+', layered depth, natural physical motion, controlled composition, rich production design, consistent appearance throughout.';if(!p.includes('Cinematic continuity:'))$('prompt').value=(p+add).slice(0,1800);$('charCount').textContent=$('prompt').value.length};
 $('generate').onclick=async()=>{
  if(busy)return;
@@ -238,7 +240,7 @@ $('generate').onclick=async()=>{
   const promptNote=document.createElement('p');promptNote.className='small';promptNote.textContent='Prompt sent to model: '+prompt;$('result').appendChild(promptNote);const copyBtn=document.createElement('button');copyBtn.type='button';copyBtn.className='muted-button';copyBtn.textContent='Copy prompt';copyBtn.onclick=async()=>{try{await navigator.clipboard.writeText(prompt);copyBtn.textContent='Prompt copied'}catch(e){const ta=document.createElement('textarea');ta.value=prompt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');copyBtn.textContent='Prompt copied'}catch(x){copyBtn.textContent='Copy unavailable'}ta.remove()}};$('result').appendChild(copyBtn);$('status').textContent=(selected.kind==='ltx098'?'LTX-2.5 was unavailable; fallback LTX 0.9.8 returned a clip.':'Official LTX-2.5 returned a clip. Review it against your prompt; exact prompt matching is not guaranteed.');
  }catch(error){
   $('result').replaceChildren();
-  const message=error&&error.name==='AbortError'?'The free model took longer than 8 minutes and the request was stopped. Check the model host and try again.':(error&&error.message?error.message:String(error??'Unknown error'));
+  const message=error&&error.name==='AbortError'?'The free model request exceeded the 10-minute safety timeout and was stopped. Check the model host and try again.':(error&&error.message?error.message:String(error??'Unknown error'));
   $('status').textContent='Video generation failed: '+message+' No sample video is being shown as a substitute.';
   const help=document.createElement('p');help.className='small';help.textContent='Troubleshooting: confirm your internet connection, check that the LTX Video Space is available, and retry. If the error continues, the model host—not your prompt—may be failing.';$('result').appendChild(help);
  }finally{clearTimeout(requestTimeout);busy=false;$('generate').disabled=false}
