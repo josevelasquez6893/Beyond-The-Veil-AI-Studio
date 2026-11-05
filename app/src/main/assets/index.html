@@ -83,7 +83,10 @@ $('directorPass').onclick=()=>{
 };
 function stopAmbient(){ambientNodes.forEach(n=>{try{if(n.stop)n.stop()}catch(e){}});ambientNodes=[];if(master){try{master.disconnect()}catch(e){}master=null}soundOn=false;$('soundToggle').textContent='▶ Start cinematic soundtrack';$('soundToggle').setAttribute('aria-pressed','false');$('audioStatus').textContent='Soundtrack stopped.'}
 $('soundVolume').addEventListener('input',()=>{if(master&&audioCtx)master.gain.setTargetAtTime(Number($('soundVolume').value)/100*.62,audioCtx.currentTime,.08)});
-// Sound effects are triggered only by the controls that explicitly request them.
+// Sound effects remain optional and never auto-start the background soundtrack.
+document.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+ if(clickOn&&!['clickToggle','soundToggle','audioTest'].includes(b.id))clickSound();
+}));
 // Audio is opt-in: never start the soundtrack automatically on the first tap.
 $('soundToggle').onclick=()=>{if(soundOn)stopAmbient();else startAmbient()};$('audioTest').onclick=testAudio;
 $('clickToggle').onclick=()=>{clickOn=!clickOn;$('clickToggle').textContent='Click effects: '+(clickOn?'On':'Off');$('clickToggle').setAttribute('aria-pressed',String(clickOn))};
@@ -127,7 +130,7 @@ $('prompt').addEventListener('input',()=>{$('charCount').textContent=$('prompt')
 ['duration','style','camera','lighting','format'].forEach(id=>$(id).addEventListener('change',invalidateDirectorPlan));
 $('useRecipe').onclick=()=>{const recipe=$('recipe').value;if(!recipe){$('status').textContent='Choose a starter recipe first.';return}const current=$('prompt').value.trim();$('prompt').value=(current?current+' ':'')+recipe;$('prompt').value=$('prompt').value.slice(0,1800);$('charCount').textContent=$('prompt').value.length;invalidateDirectorPlan();$('prompt').focus();$('status').textContent='Starter added. Customize the subject, location, action, and ending before generating.'};
 $('clearPrompt').onclick=()=>{$('prompt').value='';$('charCount').textContent='0';invalidateDirectorPlan();$('prompt').focus()};
-$('enhance').onclick=()=>{const p=$('prompt').value.trim();if(!p){$('status').textContent='Add a scene description first.';return}const add=' Cinematic continuity: one clear main subject, detailed environment, a single readable action, deliberate '+$('camera').value+', '+$('lighting').value+', layered depth, natural physical motion, controlled composition, rich production design, consistent appearance throughout.';if(!p.includes('Cinematic continuity:'))$('prompt').value=(p+add).slice(0,1800);$('charCount').textContent=$('prompt').value.length};
+$('enhance').onclick=()=>{const p=$('prompt').value.trim();if(!p){$('status').textContent='Add a scene description first.';return}const add=' Cinematic continuity: one clear main subject, detailed environment, a single readable action, deliberate '+$('camera').value+', '+$('lighting').value+', layered depth, natural physical motion, controlled composition, rich production design, consistent appearance throughout.';if(!p.includes('Cinematic continuity:'))$('prompt').value=(p+add).slice(0,1800);$('charCount').textContent=$('prompt').value.length;invalidateDirectorPlan()};
 $('generate').onclick=async()=>{
  if(busy)return;
  const prompt=$('prompt').value.trim();
