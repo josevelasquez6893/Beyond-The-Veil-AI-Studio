@@ -258,4 +258,12 @@ $('generate').onclick=async()=>{
  }finally{clearTimeout(requestTimeout);busy=false;$('generate').disabled=false}
 }
 render();
+// Attempt soundtrack autoplay on launch. Android WebView is configured to permit
+// media playback without a gesture; if the device still blocks Web Audio,
+// the visible Start soundtrack control remains available as a one-tap fallback.
+window.addEventListener('load',()=>{
+ setTimeout(()=>{
+  if(!soundOn)startAmbient();
+ },250);
+},{once:true});
 </script></body></html>
