@@ -159,7 +159,7 @@ $('generate').onclick=async()=>{
   const framing=$('format').selectedIndex;
   const isPortrait=framing===0,isLandscape=framing===1;
   const legacyHeight=isPortrait?768:isLandscape?432:512,legacyWidth=isPortrait?432:isLandscape?768:512;
-  const modernHeight=isPortrait?672:isLandscape?384:512,modernWidth=isPortrait?384:isLandscape?672:512;
+  const modernHeight=isPortrait?896:isLandscape?512:512,modernWidth=isPortrait?512:isLandscape?896:512;
   let selected=null,job=null,stream=null,lastError=null;
   for(const engine of engines){
    try{
