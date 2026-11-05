@@ -1,0 +1,40 @@
+BEYOND THE VEIL AI STUDIO - PERSONAL ANDROID BUILD
+
+Included:
+- Android WebView app shell and local movie/scene planner.
+- Hugging Face Gradio queue API connector.
+- Optional OpenAPI endpoint discovery.
+- Configurable endpoint and JSON input array.
+- Video preview when the Space returns a compatible video file URL.
+- Token is session-only and not saved to project settings.
+- GitHub Actions workflow for cloud APK compilation.
+
+Phone-only APK build:
+1. Open Actions and enable workflows if prompted, choose "Build Android APK",
+   then tap "Run workflow".
+2. Wait for a successful run. Download the artifact named
+   "BeyondTheVeilAIStudio-debug-apk" from the run summary.
+3. Extract app-debug.apk and install it. Android may ask you to allow
+   installation from your file manager/browser.
+
+AI setup:
+1. Create/sign in to Hugging Face.
+2. Choose a running Gradio video-generation Space with ZeroGPU and a public API.
+3. Enter Space ID (owner/name) in Engine setup.
+4. Tap Discover API endpoints. If blocked, use the Space's "Use via API" page.
+5. Enter the endpoint name and the exact input JSON array from its API schema.
+   Put "{{prompt}}" wherever the prompt string belongs.
+6. Add a read-only HF token only if required. It stays in memory until the app
+   page closes; it is not stored in local project settings.
+7. Save connection and try a short test clip.
+
+Limitations:
+- Free ZeroGPU use is limited; queue/model restrictions apply.
+- Each Space has its own API. Generic endpoint discovery cannot determine all
+  required argument values or adapt every output type.
+- Browser CORS restrictions, x-ip-token forwarding, private Spaces, or unusual
+  output types may require a custom backend adapter.
+- A one-hour film is assembled from many short clips and needs a separate
+  editing/export workflow.
+- The build is a debug personal-use APK, not a Play Store release.
+- This source has not been compiled or tested on a physical Android device.
