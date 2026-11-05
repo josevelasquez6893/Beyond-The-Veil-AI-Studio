@@ -53,7 +53,7 @@ $('generate').onclick=async()=>{
   const cinematicPrompt='LIVE-ACTION PHOTOREALISTIC CINEMA. '+prompt+'. Visual treatment: '+$('style').value+'. Camera: '+$('camera').value+'. Lighting: '+$('lighting').value+'. Photorealistic live-action film frame, realistic adult human proportions and natural facial detail where people appear, grounded production design, detailed real-world textures, physically plausible movement, one continuous shot, consistent subject identity and wardrobe across frames, deliberate composition, cinematic depth of field, natural motion blur, professional color grading. Avoid all illustration or animation aesthetics.';
   const negative='cartoon, 2D animation, 3D animation, anime, illustration, children’s storybook art, comic art, toy-like characters, plastic skin, exaggerated eyes, chibi, cute mascot, rainbow, pastel fantasy, flat shading, low-poly, CGI render, game asset, low detail, blurry, flicker, jitter, morphing, extra limbs, distorted anatomy, inconsistent subject, text, subtitles, watermark, low resolution';
   const duration=Number($('duration').value);
-  const data=[cinematicPrompt,negative,null,null,768,1280,'text-to-video',duration,9,42,true,4.5,true];
+  const data=[cinematicPrompt,negative,null,null,512,704,'text-to-video',duration,9,42,true,4,true];
   const response=await fetch(base+'/gradio_api/call/text_to_video',{method:'POST',headers,body:JSON.stringify({data})});
   if(!response.ok)throw Error('LTX Video returned HTTP '+response.status+'. Check Hugging Face access or service availability.');
   const job=await response.json();
