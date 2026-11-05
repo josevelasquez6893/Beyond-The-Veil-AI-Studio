@@ -80,9 +80,20 @@ $('generate').onclick=async()=>{
   if(!response.ok)throw Error('LTX Video returned HTTP '+response.status+'. Check Hugging Face access or service availability.');
   const job=await response.json();
   if(!job.event_id)throw Error('The video service did not return a generation job ID.');
-  $('status').textContent='Generation started. Waiting for LTX Video…';
-  const stream=await fetch(activeBase+'/gradio_api/call/'+activeEndpoint+'/'+encodeURIComponent(job.event_id),{headers:{},signal:controller.signal});
-  if(!stream.ok||!stream.body)throw Error('Could not retrieve the generation stream (HTTP '+stream.status+').');
+  $('status').textContent='Generation queued. Waiting for free GPU capacity…';
+  let stream=null,lastStreamError=null;
+  for(let attempt=0;attempt<4;attempt++){
+   try{
+    stream=await fetch(base+'/gradio_api/call/text_to_video/'+encodeURIComponent(job.event_id),{headers:{},signal:controller.signal});
+    if(!stream.ok||!stream.body)throw Error('Queue stream returned HTTP '+stream.status);
+    lastStreamError=null;break;
+   }catch(e){
+    if(controller.signal.aborted)throw e;
+    lastStreamError=e;
+    if(attempt<3){const wait=1000*(attempt+1);$('status').textContent='Reconnecting to your queued generation ('+(attempt+2)+'/4)…';await new Promise((resolve,reject)=>{const id=setTimeout(resolve,wait);controller.signal.addEventListener('abort',()=>{clearTimeout(id);reject(new DOMException('Aborted','AbortError'))},{once:true})})}
+   }
+  }
+  if(!stream)throw Error('Could not reconnect to the queued generation: '+(lastStreamError?.message||'network error'));
   const reader=stream.body.getReader(),decoder=new TextDecoder();
   let buffer='',output=null,done=false;
   while(!done){
